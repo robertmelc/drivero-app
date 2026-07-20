@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --border: rgba(255, 255, 255, 0.14);
+  --border-green: rgba(52, 227, 122, 0.35);
+  --glass: rgba(255, 255, 255, 0.055);
+}
+
+html,
+body {
+  background-color: #05070a;
+  color: #e9f3ec;
+}
+
+.glass-panel {
+  background: var(--glass);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  backdrop-filter: blur(20px);
+}
+
+.mesh-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.mesh-bg span {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(110px);
+}

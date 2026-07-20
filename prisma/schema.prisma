@@ -1,0 +1,309 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserRole {
+  admin
+  accountant
+  driver
+}
+
+enum UserStatus {
+  active
+  invited
+  disabled
+}
+
+enum FuelType {
+  petrol
+  diesel
+  electric
+  hybrid
+  lpg
+}
+
+enum OwnershipType {
+  owned
+  finance_lease
+  operating_lease
+}
+
+enum VehicleStatus {
+  active
+  in_service
+  retired
+}
+
+enum ProtocolType {
+  handover
+  return
+}
+
+enum ServiceType {
+  regular_service
+  repair
+  tires
+  other
+}
+
+enum TripType {
+  business
+  private
+}
+
+enum NotificationType {
+  stk
+  vignette
+  insurance
+  service
+  lease_end
+}
+
+enum NotificationStatus {
+  pending
+  sent
+  resolved
+  dismissed
+}
+
+enum DocumentOwnerType {
+  vehicle
+  handover_protocol
+  service_record
+  fuel_expense
+  company
+}
+
+enum AuditAction {
+  create
+  update
+  delete
+}
+
+model Company {
+  id              String   @id @default(uuid())
+  name            String
+  ico             String   @unique
+  dic             String?
+  address         String?
+  plan            String   @default("starter")
+  retentionYears  Int      @default(5) @map("retention_years")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  users           User[]
+  vehicles        Vehicle[]
+  documents       Document[]
+  notifications   Notification[]
+  auditLogs       AuditLog[]
+
+  @@map("companies")
+}
+
+model User {
+  id          String     @id @default(uuid())
+  companyId   String     @map("company_id")
+  company     Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  email       String     @unique
+  passwordHash String    @map("password_hash")
+  phone       String?
+  role        UserRole
+  startedAt   DateTime?  @map("started_at")
+  status      UserStatus @default(invited)
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  assignments        VehicleAssignment[]
+  tripLogEntries      TripLogEntry[]
+  handoverProtocolsAsDriver HandoverProtocol[] @relation("ProtocolDriver")
+  documentsUploaded   Document[]
+  auditLogs           AuditLog[]
+
+  @@index([companyId])
+  @@map("users")
+}
+
+model Vehicle {
+  id                              String        @id @default(uuid())
+  companyId                       String        @map("company_id")
+  company                         Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  spz                             String
+  vin                             String        @unique
+  make                            String
+  model                           String
+  year                            Int
+  fuelType                        FuelType      @map("fuel_type")
+  consumptionL100km                Decimal?      @map("consumption_l_100km")
+  ownershipType                   OwnershipType @map("ownership_type")
+  leaseSupplier                   String?       @map("lease_supplier")
+  leaseEndDate                    DateTime?     @map("lease_end_date")
+  odometerKm                      Int           @default(0) @map("odometer_km")
+  status                          VehicleStatus @default(active)
+  stkValidUntil                   DateTime?     @map("stk_valid_until")
+  vignetteValidUntil              DateTime?     @map("vignette_valid_until")
+  insuranceLiabilityValidUntil    DateTime?     @map("insurance_liability_valid_until")
+  insuranceCascoValidUntil        DateTime?     @map("insurance_casco_valid_until")
+  insuranceProvider               String?       @map("insurance_provider")
+  insurancePolicyNumber           String?       @map("insurance_policy_number")
+  createdAt                       DateTime      @default(now()) @map("created_at")
+  updatedAt                       DateTime      @updatedAt @map("updated_at")
+
+  assignments        VehicleAssignment[]
+  handoverProtocols   HandoverProtocol[]
+  serviceRecords      ServiceRecord[]
+  tripLogEntries      TripLogEntry[]
+  fuelExpenses        FuelExpense[]
+  notifications       Notification[]
+
+  @@index([companyId])
+  @@map("vehicles")
+}
+
+model VehicleAssignment {
+  id        String    @id @default(uuid())
+  vehicleId String    @map("vehicle_id")
+  vehicle   Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  userId    String    @map("user_id")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  validFrom DateTime  @map("valid_from")
+  validTo   DateTime? @map("valid_to")
+
+  @@index([vehicleId])
+  @@index([userId])
+  @@map("vehicle_assignments")
+}
+
+model HandoverProtocol {
+  id               String       @id @default(uuid())
+  vehicleId        String       @map("vehicle_id")
+  vehicle          Vehicle      @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  userId           String       @map("user_id")
+  driver           User         @relation("ProtocolDriver", fields: [userId], references: [id])
+  type             ProtocolType
+  protocolDate     DateTime     @map("protocol_date")
+  odometerKm       Int          @map("odometer_km")
+  conditionNotes   String?      @map("condition_notes")
+  photos           Json?
+  signedByAdmin    Boolean      @default(false) @map("signed_by_admin")
+  signedByAdminAt  DateTime?    @map("signed_by_admin_at")
+  signedByDriver   Boolean      @default(false) @map("signed_by_driver")
+  signedByDriverAt DateTime?    @map("signed_by_driver_at")
+  pdfDocumentId    String?      @map("pdf_document_id")
+  createdAt        DateTime     @default(now()) @map("created_at")
+
+  @@index([vehicleId])
+  @@map("handover_protocols")
+}
+
+model ServiceRecord {
+  id                String      @id @default(uuid())
+  vehicleId         String      @map("vehicle_id")
+  vehicle           Vehicle     @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  type              ServiceType
+  serviceDate       DateTime    @map("service_date")
+  odometerKm        Int         @map("odometer_km")
+  supplier          String?
+  costAmount        Decimal     @map("cost_amount")
+  costCurrency      String      @default("CZK") @map("cost_currency")
+  documentId        String?     @map("document_id")
+  nextServiceDueDate DateTime?  @map("next_service_due_date")
+  nextServiceDueKm  Int?        @map("next_service_due_km")
+
+  @@index([vehicleId])
+  @@map("service_records")
+}
+
+model TripLogEntry {
+  id              String   @id @default(uuid())
+  vehicleId       String   @map("vehicle_id")
+  vehicle         Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  userId          String   @map("user_id")
+  user            User     @relation(fields: [userId], references: [id])
+  sequenceNumber  Int      @map("sequence_number")
+  tripDate        DateTime @map("trip_date")
+  startTime       DateTime @map("start_time")
+  endTime         DateTime @map("end_time")
+  startLocation   String   @map("start_location")
+  endLocation     String   @map("end_location")
+  purpose         String
+  tripType        TripType @map("trip_type")
+  odometerStartKm Int      @map("odometer_start_km")
+  odometerEndKm   Int      @map("odometer_end_km")
+  distanceKm      Int      @map("distance_km")
+  note            String?
+  locked          Boolean  @default(false)
+  editedFromId    String?  @map("edited_from_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@unique([vehicleId, sequenceNumber])
+  @@index([vehicleId])
+  @@index([userId])
+  @@map("trip_log_entries")
+}
+
+model FuelExpense {
+  id          String   @id @default(uuid())
+  vehicleId   String   @map("vehicle_id")
+  vehicle     Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  tripId      String?  @map("trip_id")
+  expenseDate DateTime @map("expense_date")
+  liters      Decimal?
+  amount      Decimal
+  documentId  String?  @map("document_id")
+
+  @@index([vehicleId])
+  @@map("fuel_expenses")
+}
+
+model Notification {
+  id        String             @id @default(uuid())
+  companyId String             @map("company_id")
+  company   Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  vehicleId String?            @map("vehicle_id")
+  vehicle   Vehicle?           @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  dueDate   DateTime           @map("due_date")
+  status    NotificationStatus @default(pending)
+  leadDays  Int                @default(14) @map("lead_days")
+
+  @@index([companyId])
+  @@map("notifications")
+}
+
+model Document {
+  id         String            @id @default(uuid())
+  companyId  String            @map("company_id")
+  company    Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  ownerType  DocumentOwnerType @map("owner_type")
+  ownerId    String            @map("owner_id")
+  fileUrl    String            @map("file_url")
+  fileType   String?           @map("file_type")
+  uploadedBy String            @map("uploaded_by")
+  uploader   User              @relation(fields: [uploadedBy], references: [id])
+  createdAt  DateTime          @default(now()) @map("created_at")
+
+  @@index([companyId])
+  @@map("documents")
+}
+
+model AuditLog {
+  id         String      @id @default(uuid())
+  companyId  String      @map("company_id")
+  company    Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId     String      @map("user_id")
+  user       User        @relation(fields: [userId], references: [id])
+  entityType String      @map("entity_type")
+  entityId   String      @map("entity_id")
+  action     AuditAction
+  diff       Json?
+  createdAt  DateTime    @default(now()) @map("created_at")
+
+  @@index([companyId])
+  @@map("audit_logs")
+}
