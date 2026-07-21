@@ -2,11 +2,7 @@ import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Swap this for a verified drivero.eu address once the domain is set up in
-// Resend (Domains → Add Domain → add the DNS records they give you, same
-// pattern as the drivero.eu Vercel domain setup). Until then, Resend's shared
-// sandbox sender works fine for real delivery to real inboxes.
-const FROM = "Drivero <onboarding@resend.dev>";
+const FROM = "Drivero <pozvanka@drivero.eu>";
 
 export async function sendDriverInviteEmail(to: string, inviteUrl: string, companyName: string) {
   const { error } = await resend.emails.send({
