@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { GaugeIcon } from "@/components/icons";
 import { SignaturePad } from "@/components/signature-pad";
+import { supabaseBrowser } from "@/lib/supabase-browser";
 
 type CompanyUser = { id: string; email: string; role: string };
 
@@ -59,15 +60,30 @@ function ProtocolForm() {
     setUploading((u) => ({ ...u, [slotKey]: true }));
     setError(null);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch("/api/upload", { method: "POST", body: formData });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || "Nahrání fotky selhalo");
+      // 1. Ask our server for a short-lived signed upload URL — no file bytes sent yet.
+      const signRes = await fetch("/api/upload/sign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fileName: file.name }),
+      });
+      const signData = await signRes.json();
+      if (!signRes.ok) {
+        setError(signData.error || "Přípravu nahrání se nepodařilo dokončit");
         return;
       }
-      setPhotos((p) => ({ ...p, [slotKey]: data.url }));
+
+      // 2. Upload the actual file straight to Supabase Storage from the browser —
+      // this never touches our Vercel function, so its payload size limit doesn't apply.
+      const { error: uploadError } = await supabaseBrowser.storage
+        .from("handover-photos")
+        .uploadToSignedUrl(signData.path, signData.token, file);
+
+      if (uploadError) {
+        setError(`Nahrání fotky selhalo: ${uploadError.message}`);
+        return;
+      }
+
+      setPhotos((p) => ({ ...p, [slotKey]: signData.publicUrl }));
     } catch {
       setError("Nahrání fotky selhalo, zkuste to znovu");
     } finally {
