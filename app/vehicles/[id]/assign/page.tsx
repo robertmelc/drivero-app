@@ -16,7 +16,6 @@ export default function AssignDriverPage() {
   const [drivers, setDrivers] = useState<CompanyUser[]>([]);
   const [selectedUserId, setSelectedUserId] = useState("");
   const [newEmail, setNewEmail] = useState("");
-  const [newPassword, setNewPassword] = useState("");
 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -45,11 +44,11 @@ export default function AssignDriverPage() {
         const createRes = await fetch("/api/users", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: newEmail, password: newPassword, role: "driver" }),
+          body: JSON.stringify({ email: newEmail, role: "driver" }),
         });
         const createData = await createRes.json();
         if (!createRes.ok) {
-          setError(createData.error || "Řidiče se nepodařilo vytvořit");
+          setError(createData.error || "Řidiče se nepodařilo pozvat");
           setLoading(false);
           return;
         }
@@ -117,7 +116,7 @@ export default function AssignDriverPage() {
             onClick={() => setMode("new")}
             className={`flex-1 py-2.5 text-sm font-bold ${mode === "new" ? "bg-signal/15 text-signal" : "text-muted"}`}
           >
-            Přidat nového
+            Pozvat nového
           </button>
         </div>
 
@@ -126,7 +125,7 @@ export default function AssignDriverPage() {
             loadingDrivers ? (
               <p className="text-sm text-muted">Načítám řidiče…</p>
             ) : drivers.length === 0 ? (
-              <p className="text-sm text-muted">Zatím nemáte žádného řidiče — přidejte nového vedle.</p>
+              <p className="text-sm text-muted">Zatím nemáte žádného řidiče — pozvěte nového vedle.</p>
             ) : (
               <div>
                 <label className={labelClass}>Řidič</label>
@@ -151,20 +150,8 @@ export default function AssignDriverPage() {
                   className={inputClass}
                 />
               </div>
-              <div>
-                <label className={labelClass}>Dočasné heslo</label>
-                <input
-                  type="password"
-                  required
-                  minLength={8}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="min. 8 znaků"
-                  className={inputClass}
-                />
-              </div>
               <p className="text-xs text-muted">
-                Řidič se s tímto heslem přihlásí — doporučujeme mu ho hned po prvním přihlášení nechat změnit.
+                ✉️ Řidiči přijde e-mail s odkazem, kterým si sám nastaví heslo a přihlásí se — nemusíte mu nic sdělovat.
               </p>
             </>
           )}
@@ -178,7 +165,7 @@ export default function AssignDriverPage() {
             disabled={loading}
             className="w-full py-3 rounded-xl font-extrabold text-sm text-black bg-gradient-to-br from-signal to-signal-dim shadow-[0_10px_28px_rgba(52,227,122,0.25)] disabled:opacity-60"
           >
-            {loading ? "Přiřazuji…" : "Přiřadit k vozidlu"}
+            {loading ? (mode === "new" ? "Odesílám pozvánku…" : "Přiřazuji…") : mode === "new" ? "Pozvat a přiřadit k vozidlu" : "Přiřadit k vozidlu"}
           </button>
         </form>
       </div>

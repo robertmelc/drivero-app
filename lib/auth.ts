@@ -7,6 +7,7 @@ const JWT_SECRET = new TextEncoder().encode(
 );
 const SESSION_COOKIE = "drivero_session";
 const SESSION_DURATION_DAYS = 30;
+const INVITE_DURATION_DAYS = 7;
 
 export type SessionPayload = {
   userId: string;
@@ -77,4 +78,27 @@ export async function requireSession(): Promise<
 
 export function requireRole(session: SessionPayload, roles: SessionPayload["role"][]): boolean {
   return roles.includes(session.role);
+}
+
+// --- Driver invite tokens ---
+// Reuses the same signing secret as sessions but with a distinct `purpose` claim
+// so an invite token can never be mistaken for (or reused as) a session token.
+// Stateless by design — no extra DB table or migration needed.
+
+export async function createInviteToken(userId: string): Promise<string> {
+  return new SignJWT({ userId, purpose: "invite" })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime(`${INVITE_DURATION_DAYS}d`)
+    .sign(JWT_SECRET);
+}
+
+export async function verifyInviteToken(token: string): Promise<{ userId: string } | null> {
+  try {
+    const { payload } = await jwtVerify(token, JWT_SECRET);
+    if (payload.purpose !== "invite" || typeof payload.userId !== "string") return null;
+    return { userId: payload.userId };
+  } catch {
+    return null;
+  }
 }
