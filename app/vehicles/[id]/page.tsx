@@ -12,6 +12,13 @@ const statusTextColor: Record<string, string> = {
   unknown: "text-muted",
 };
 
+const TYPE_LABELS: Record<string, string> = {
+  regular_service: "Pravidelný servis",
+  repair: "Oprava",
+  tires: "Výměna pneu",
+  other: "Ostatní",
+};
+
 export default async function VehicleDetailPage({ params }: { params: { id: string } }) {
   const session = await getSession();
   if (!session) redirect("/login");
@@ -21,6 +28,7 @@ export default async function VehicleDetailPage({ params }: { params: { id: stri
     include: {
       assignments: { where: { validTo: null }, include: { user: { select: { email: true } } } },
       serviceRecords: { orderBy: { serviceDate: "desc" } },
+      handoverProtocols: { orderBy: { protocolDate: "desc" }, take: 1, include: { driver: { select: { email: true } } } },
     },
   });
 
@@ -36,6 +44,9 @@ export default async function VehicleDetailPage({ params }: { params: { id: stri
     { icon: "⚠️", label: "STK", date: vehicle.stkValidUntil },
     { icon: "🎫", label: "Dálniční známka", date: vehicle.vignetteValidUntil },
   ];
+
+  const lastProtocol = vehicle.handoverProtocols[0];
+  const assignedDriverId = vehicle.assignments[0]?.userId ?? "";
 
   return (
     <main className="relative min-h-screen px-6 py-8">
@@ -94,25 +105,66 @@ export default async function VehicleDetailPage({ params }: { params: { id: stri
           })}
         </div>
 
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-bold">Historie servisu</h2>
-        </div>
-        <div className="glass-panel overflow-hidden">
-          {vehicle.serviceRecords.length === 0 ? (
-            <div className="p-6 text-center text-sm text-muted">Zatím žádné záznamy o servisu.</div>
-          ) : (
-            vehicle.serviceRecords.map((s, i) => (
-              <div key={s.id} className={`p-4 flex items-center justify-between ${i !== 0 ? "border-t border-white/10" : ""}`}>
-                <div>
-                  <div className="text-sm font-semibold">🔧 {s.type}</div>
-                  <div className="text-xs text-muted">
-                    {s.supplier} · {formatDate(s.serviceDate)} · {s.odometerKm.toLocaleString("cs-CZ")} km
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-base font-bold">Historie servisu</h2>
+              {session.role === "admin" && (
+                <Link
+                  href={`/vehicles/${vehicle.id}/service/new`}
+                  className="px-3.5 py-2 rounded-lg text-xs font-extrabold text-black bg-gradient-to-br from-signal to-signal-dim"
+                >
+                  + Přidat záznam
+                </Link>
+              )}
+            </div>
+            <div className="glass-panel overflow-hidden">
+              {vehicle.serviceRecords.length === 0 ? (
+                <div className="p-6 text-center text-sm text-muted">Zatím žádné záznamy o servisu.</div>
+              ) : (
+                vehicle.serviceRecords.map((s, i) => (
+                  <div key={s.id} className={`p-4 flex items-center justify-between ${i !== 0 ? "border-t border-white/10" : ""}`}>
+                    <div>
+                      <div className="text-sm font-semibold">🔧 {TYPE_LABELS[s.type] || s.type}</div>
+                      <div className="text-xs text-muted">
+                        {s.supplier} · {formatDate(s.serviceDate)} · {s.odometerKm.toLocaleString("cs-CZ")} km
+                      </div>
+                    </div>
+                    <div className="font-mono text-sm font-bold text-mint">{s.costAmount.toString()} Kč</div>
                   </div>
-                </div>
-                <div className="font-mono text-sm font-bold text-mint">{s.costAmount.toString()} Kč</div>
-              </div>
-            ))
-          )}
+                ))
+              )}
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-base font-bold">Předávací protokol</h2>
+            </div>
+            <div className="glass-panel p-4 mb-3">
+              {!lastProtocol ? (
+                <div className="text-sm text-muted text-center py-2">Zatím žádný protokol.</div>
+              ) : (
+                <>
+                  <div className={`flex items-center gap-2 text-sm font-bold mb-1 ${lastProtocol.signedByAdmin && lastProtocol.signedByDriver ? "text-signal" : "text-amber"}`}>
+                    {lastProtocol.signedByAdmin && lastProtocol.signedByDriver ? "✓ Podepsáno oběma stranami" : "⚠ Čeká na podpis"}
+                  </div>
+                  <div className="text-xs text-muted">
+                    {lastProtocol.type === "handover" ? "Předání" : "Vrácení"} · {formatDate(lastProtocol.protocolDate)} ·
+                    {" "}stav {lastProtocol.odometerKm.toLocaleString("cs-CZ")} km · {lastProtocol.driver.email}
+                  </div>
+                </>
+              )}
+            </div>
+            {session.role === "admin" && (
+              <Link
+                href={`/vehicles/${vehicle.id}/handover/new?driverId=${assignedDriverId}&odometer=${vehicle.odometerKm}`}
+                className="block text-center px-3.5 py-2.5 rounded-lg text-xs font-extrabold text-black bg-gradient-to-br from-signal to-signal-dim"
+              >
+                + Nový protokol
+              </Link>
+            )}
+          </div>
         </div>
       </div>
     </main>
