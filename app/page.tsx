@@ -36,6 +36,7 @@ export default function HomePage() {
             <a href="#problem" className="hover:text-ink">Problém</a>
             <a href="#features" className="hover:text-ink">Co Drivero řeší</a>
             <a href="#pricing" className="hover:text-ink">Ceník</a>
+            <Link href="/o-nas" className="hover:text-ink">O nás</Link>
           </div>
           <div className="flex items-center gap-3">
             <Link href="/login" className="px-4 py-2 rounded-lg border border-white/10 bg-white/5 text-sm font-bold">
