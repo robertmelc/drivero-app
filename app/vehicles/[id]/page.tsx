@@ -84,6 +84,12 @@ export default async function VehicleDetailPage({ params }: { params: { id: stri
           <div className="text-right">
             <div className="text-[11px] uppercase text-muted">Aktuální stav</div>
             <div className="text-2xl font-mono font-extrabold">{vehicle.odometerKm.toLocaleString("cs-CZ")} km</div>
+            <a
+              href={`/api/trips/export?vehicleId=${vehicle.id}`}
+              className="text-xs font-bold text-signal inline-block mt-1"
+            >
+              ⬇ Export knihy jízd (XLS)
+            </a>
           </div>
         </div>
 

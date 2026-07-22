@@ -91,7 +91,17 @@ export default async function DriverPage() {
               ＋ ZAPSAT JÍZDU
             </Link>
 
-            <h3 className="text-sm font-bold mb-2">Jízdy — tento měsíc</h3>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-bold">Jízdy — tento měsíc</h3>
+              {trips.length > 0 && (
+                <a
+                  href={`/api/trips/export?vehicleId=${vehicle.id}`}
+                  className="text-xs font-bold text-signal"
+                >
+                  ⬇ Export XLS
+                </a>
+              )}
+            </div>
             {trips.length === 0 ? (
               <div className="glass-panel p-4 text-center text-xs text-muted">Zatím žádné jízdy.</div>
             ) : (

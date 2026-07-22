@@ -36,12 +36,20 @@ export default async function VehiclesPage() {
 
         <div className="flex items-center justify-between mb-5">
           <h1 className="text-2xl font-extrabold">Vozidla</h1>
-          <Link
-            href="/vehicles/new"
-            className="px-4 py-2.5 rounded-lg text-sm font-extrabold text-black bg-gradient-to-br from-signal to-signal-dim shadow-[0_8px_24px_rgba(52,227,122,0.25)]"
-          >
-            + Přidat vozidlo
-          </Link>
+          <div className="flex items-center gap-3">
+            <a
+              href="/api/trips/export"
+              className="px-4 py-2.5 rounded-lg text-sm font-bold text-signal border border-border-green"
+            >
+              ⬇ Export knihy jízd (celá firma)
+            </a>
+            <Link
+              href="/vehicles/new"
+              className="px-4 py-2.5 rounded-lg text-sm font-extrabold text-black bg-gradient-to-br from-signal to-signal-dim shadow-[0_8px_24px_rgba(52,227,122,0.25)]"
+            >
+              + Přidat vozidlo
+            </Link>
+          </div>
         </div>
 
         {vehicles.length === 0 ? (
