@@ -31,6 +31,8 @@ export default async function DriverPage() {
       })
     : [];
 
+  const totalTripKm = trips.reduce((sum, t) => sum + t.distanceKm, 0);
+
   const vehicle = assignment?.vehicle;
   const statuses = vehicle
     ? {
@@ -97,6 +99,11 @@ export default async function DriverPage() {
               >
                 ⛽ Zapsat tankování
               </Link>
+            </div>
+
+            <div className="text-xs text-muted mb-2">
+              Tento měsíc: <span className="text-ink font-bold">{totalTripKm.toLocaleString("cs-CZ")} km</span>
+              {" "}· {trips.length} {trips.length === 1 ? "jízda" : trips.length >= 2 && trips.length <= 4 ? "jízdy" : "jízd"}
             </div>
 
             <div className="flex items-center justify-between mb-2">

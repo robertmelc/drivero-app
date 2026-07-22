@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { GaugeIcon } from "@/components/icons";
 import { LogoutButton } from "@/components/logout-button";
+import { getDeadlineStatus } from "@/lib/deadlines";
 
 export default async function DashboardPage() {
   const session = await getSession();
@@ -11,6 +12,42 @@ export default async function DashboardPage() {
   if (session.role === "driver") redirect("/driver");
 
   const vehicleCount = await prisma.vehicle.count({ where: { companyId: session.companyId } });
+
+  const now = new Date();
+  const monthStart = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
+  const monthEnd = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 1));
+
+  const [tripAgg, fuelAgg, serviceAgg, vehicles] = await Promise.all([
+    prisma.tripLogEntry.aggregate({
+      where: { vehicle: { companyId: session.companyId }, tripDate: { gte: monthStart, lt: monthEnd } },
+      _sum: { distanceKm: true },
+    }),
+    prisma.fuelExpense.aggregate({
+      where: { vehicle: { companyId: session.companyId }, expenseDate: { gte: monthStart, lt: monthEnd } },
+      _sum: { amount: true },
+    }),
+    prisma.serviceRecord.aggregate({
+      where: { vehicle: { companyId: session.companyId }, serviceDate: { gte: monthStart, lt: monthEnd } },
+      _sum: { costAmount: true },
+    }),
+    prisma.vehicle.findMany({
+      where: { companyId: session.companyId },
+      select: { stkValidUntil: true, insuranceLiabilityValidUntil: true, vignetteValidUntil: true },
+    }),
+  ]);
+
+  const totalKm = tripAgg._sum.distanceKm ?? 0;
+  const fuelCost = fuelAgg._sum.amount ? fuelAgg._sum.amount.toNumber() : 0;
+  const serviceCost = serviceAgg._sum.costAmount ? serviceAgg._sum.costAmount.toNumber() : 0;
+
+  const upcomingDeadlineCount = vehicles.filter((v) => {
+    const statuses = [
+      getDeadlineStatus(v.stkValidUntil),
+      getDeadlineStatus(v.insuranceLiabilityValidUntil),
+      getDeadlineStatus(v.vignetteValidUntil),
+    ];
+    return statuses.some((s) => s === "warn" || s === "bad");
+  }).length;
 
   return (
     <main className="relative min-h-screen px-6 py-8">
@@ -39,7 +76,7 @@ export default async function DashboardPage() {
 
         <Link
           href="/vehicles"
-          className="glass-panel p-6 flex items-center justify-between hover:border-border-green transition-colors"
+          className="glass-panel p-6 flex items-center justify-between hover:border-border-green transition-colors mb-6"
         >
           <div>
             <div className="font-bold text-base mb-1">Vozový park</div>
@@ -47,6 +84,27 @@ export default async function DashboardPage() {
           </div>
           <span className="text-signal font-bold text-lg">→</span>
         </Link>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="glass-panel p-4">
+            <div className="text-[11px] uppercase text-muted mb-2">Ujeté km (měsíc)</div>
+            <div className="text-xl font-mono font-extrabold text-mint">{totalKm.toLocaleString("cs-CZ")} km</div>
+          </div>
+          <div className="glass-panel p-4">
+            <div className="text-[11px] uppercase text-muted mb-2">Náklady na palivo</div>
+            <div className="text-xl font-mono font-extrabold text-mint">{fuelCost.toLocaleString("cs-CZ")} Kč</div>
+          </div>
+          <div className="glass-panel p-4">
+            <div className="text-[11px] uppercase text-muted mb-2">Náklady na servis</div>
+            <div className="text-xl font-mono font-extrabold text-mint">{serviceCost.toLocaleString("cs-CZ")} Kč</div>
+          </div>
+          <div className="glass-panel p-4">
+            <div className="text-[11px] uppercase text-muted mb-2">Blížící se termíny</div>
+            <div className={`text-xl font-mono font-extrabold ${upcomingDeadlineCount > 0 ? "text-amber" : "text-signal"}`}>
+              {upcomingDeadlineCount}
+            </div>
+          </div>
+        </div>
       </div>
     </main>
   );
