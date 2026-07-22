@@ -2,7 +2,10 @@ import { z } from "zod";
 import { requireSession } from "@/lib/auth";
 import { createSignedUploadUrl } from "@/lib/supabase-storage";
 
-const SignRequestSchema = z.object({ fileName: z.string().min(1) });
+const SignRequestSchema = z.object({
+  fileName: z.string().min(1),
+  bucket: z.enum(["handover-photos", "receipts"]).optional(),
+});
 
 export async function POST(req: Request) {
   const { session, error } = await requireSession();
@@ -15,7 +18,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const result = await createSignedUploadUrl(parsed.data.fileName);
+    const result = await createSignedUploadUrl(parsed.data.fileName, parsed.data.bucket);
     return Response.json(result, { status: 201 });
   } catch (e) {
     return Response.json(

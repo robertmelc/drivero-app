@@ -124,6 +124,7 @@ model User {
   handoverProtocolsAsDriver HandoverProtocol[] @relation("ProtocolDriver")
   documentsUploaded   Document[]
   auditLogs           AuditLog[]
+  fuelExpenses        FuelExpense[]
 
   @@index([companyId])
   @@map("users")
@@ -251,13 +252,17 @@ model FuelExpense {
   id          String   @id @default(uuid())
   vehicleId   String   @map("vehicle_id")
   vehicle     Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  userId      String   @map("user_id")
+  user        User     @relation(fields: [userId], references: [id])
   tripId      String?  @map("trip_id")
   expenseDate DateTime @map("expense_date")
   liters      Decimal?
   amount      Decimal
+  odometerKm  Int?     @map("odometer_km")
   documentId  String?  @map("document_id")
 
   @@index([vehicleId])
+  @@index([userId])
   @@map("fuel_expenses")
 }
 

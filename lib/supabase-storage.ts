@@ -36,13 +36,13 @@ export async function uploadPhoto(
  * the file bytes never pass through our Vercel function, so Vercel's payload
  * size limit never applies.
  */
-export async function createSignedUploadUrl(fileName: string) {
+export async function createSignedUploadUrl(fileName: string, bucket: string = BUCKET) {
   const path = `${Date.now()}-${fileName.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
 
-  const { data, error } = await supabaseAdmin.storage.from(BUCKET).createSignedUploadUrl(path);
+  const { data, error } = await supabaseAdmin.storage.from(bucket).createSignedUploadUrl(path);
   if (error) throw new Error(`Nepodařilo se připravit nahrání: ${error.message}`);
 
-  const { data: publicUrlData } = supabaseAdmin.storage.from(BUCKET).getPublicUrl(path);
+  const { data: publicUrlData } = supabaseAdmin.storage.from(bucket).getPublicUrl(path);
 
   return {
     path,

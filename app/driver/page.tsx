@@ -84,12 +84,20 @@ export default async function DriverPage() {
               </div>
             </div>
 
-            <Link
-              href={`/driver/trip/new?vehicleId=${vehicle.id}&odometer=${vehicle.odometerKm}`}
-              className="block text-center w-full py-3.5 rounded-xl font-extrabold text-sm text-black bg-gradient-to-br from-signal to-signal-dim shadow-[0_10px_28px_rgba(52,227,122,0.25)] mb-6"
-            >
-              ＋ ZAPSAT JÍZDU
-            </Link>
+            <div className="grid grid-cols-2 gap-3 mb-6">
+              <Link
+                href={`/driver/trip/new?vehicleId=${vehicle.id}&odometer=${vehicle.odometerKm}`}
+                className="block text-center py-3.5 rounded-xl font-extrabold text-sm text-black bg-gradient-to-br from-signal to-signal-dim shadow-[0_10px_28px_rgba(52,227,122,0.25)]"
+              >
+                ＋ ZAPSAT JÍZDU
+              </Link>
+              <Link
+                href={`/driver/fuel/new?vehicleId=${vehicle.id}&odometer=${vehicle.odometerKm}`}
+                className="block text-center py-3.5 rounded-xl font-extrabold text-sm text-signal border border-border-green"
+              >
+                ⛽ Zapsat tankování
+              </Link>
+            </div>
 
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-bold">Jízdy — tento měsíc</h3>

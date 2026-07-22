@@ -29,6 +29,7 @@ export default async function VehicleDetailPage({ params }: { params: { id: stri
       assignments: { where: { validTo: null }, include: { user: { select: { email: true } } } },
       serviceRecords: { orderBy: { serviceDate: "desc" } },
       handoverProtocols: { orderBy: { protocolDate: "desc" }, take: 1, include: { driver: { select: { email: true } } } },
+      fuelExpenses: { orderBy: { expenseDate: "desc" }, take: 5 },
     },
   });
 
@@ -111,7 +112,7 @@ export default async function VehicleDetailPage({ params }: { params: { id: stri
           })}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           <div>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-base font-bold">Historie servisu</h2>
@@ -170,6 +171,30 @@ export default async function VehicleDetailPage({ params }: { params: { id: stri
                 + Nový protokol
               </Link>
             )}
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-base font-bold">Tankování</h2>
+            </div>
+            <div className="glass-panel overflow-hidden">
+              {vehicle.fuelExpenses.length === 0 ? (
+                <div className="p-6 text-center text-sm text-muted">Zatím žádné záznamy o tankování.</div>
+              ) : (
+                vehicle.fuelExpenses.map((f, i) => (
+                  <div key={f.id} className={`p-4 flex items-center justify-between ${i !== 0 ? "border-t border-white/10" : ""}`}>
+                    <div>
+                      <div className="text-sm font-semibold">⛽ {formatDate(f.expenseDate)}</div>
+                      <div className="text-xs text-muted">
+                        {f.liters ? `${f.liters.toString()} l` : "— l"}
+                        {f.odometerKm ? ` · ${f.odometerKm.toLocaleString("cs-CZ")} km` : ""}
+                      </div>
+                    </div>
+                    <div className="font-mono text-sm font-bold text-mint">{f.amount.toString()} Kč</div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
       </div>
