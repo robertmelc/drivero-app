@@ -10,6 +10,20 @@ export function getDeadlineStatus(date: Date | null | undefined): DeadlineStatus
   return "ok";
 }
 
+/**
+ * How close a deadline is, as a 0–100 slider position — not the elapsed share
+ * of the whole validity period (the app doesn't store a start date). Stays at
+ * 0 until the last `windowDays` before the deadline, then climbs to 100 on
+ * the day it expires.
+ */
+export function getDeadlineProgress(date: Date | null | undefined, windowDays = 90): number {
+  if (!date) return 0;
+  const daysLeft = (date.getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+  if (daysLeft <= 0) return 100;
+  if (daysLeft >= windowDays) return 0;
+  return Math.round(((windowDays - daysLeft) / windowDays) * 100);
+}
+
 export function formatDate(date: Date | null | undefined): string {
   if (!date) return "—";
   return new Intl.DateTimeFormat("cs-CZ", { day: "numeric", month: "numeric", year: "numeric" }).format(date);

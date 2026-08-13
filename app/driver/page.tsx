@@ -4,7 +4,14 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { GaugeIcon, CarSideIcon } from "@/components/icons";
 import { LogoutButton } from "@/components/logout-button";
-import { getDeadlineStatus, statusColor } from "@/lib/deadlines";
+import { getDeadlineStatus, getDeadlineProgress, statusColor, formatDate } from "@/lib/deadlines";
+
+const trackColor: Record<string, string> = {
+  ok: "bg-signal/20",
+  warn: "bg-amber/20",
+  bad: "bg-danger/20",
+  unknown: "bg-white/10",
+};
 
 export default async function DriverPage() {
   const session = await getSession();
@@ -34,13 +41,14 @@ export default async function DriverPage() {
   const totalTripKm = trips.reduce((sum, t) => sum + t.distanceKm, 0);
 
   const vehicle = assignment?.vehicle;
-  const statuses = vehicle
-    ? {
-        stk: getDeadlineStatus(vehicle.stkValidUntil),
-        insurance: getDeadlineStatus(vehicle.insuranceLiabilityValidUntil),
-        vignette: getDeadlineStatus(vehicle.vignetteValidUntil),
-      }
-    : null;
+  const deadlineRows = vehicle
+    ? [
+        { icon: "🛡️", label: "Pojištění", date: vehicle.insuranceLiabilityValidUntil },
+        { icon: "⚠️", label: "STK", date: vehicle.stkValidUntil },
+        { icon: "🎫", label: "Dálniční známka", date: vehicle.vignetteValidUntil },
+        { icon: "🅿️", label: "Parkovací karta", date: vehicle.parkingCardValidUntil },
+      ]
+    : [];
 
   return (
     <main className="relative min-h-screen flex items-center justify-center px-4 py-10">
@@ -79,10 +87,27 @@ export default async function DriverPage() {
               <div className="font-mono text-2xl font-extrabold mt-2">
                 {vehicle.odometerKm.toLocaleString("cs-CZ")} <span className="text-sm font-normal text-muted">km</span>
               </div>
-              <div className="flex gap-4 mt-3 pt-3 border-t border-white/10">
-                <span className={`inline-block w-2.5 h-2.5 rounded-full ${statusColor[statuses!.stk]}`} title="STK" />
-                <span className={`inline-block w-2.5 h-2.5 rounded-full ${statusColor[statuses!.insurance]}`} title="Pojištění" />
-                <span className={`inline-block w-2.5 h-2.5 rounded-full ${statusColor[statuses!.vignette]}`} title="Známka" />
+              <div className="mt-3 pt-3 border-t border-white/10 space-y-2.5">
+                {deadlineRows.map((r) => {
+                  const status = getDeadlineStatus(r.date);
+                  const progress = getDeadlineProgress(r.date);
+                  return (
+                    <div key={r.label}>
+                      <div className="flex items-center justify-between text-[11px] mb-1">
+                        <span className="text-muted">{r.icon} {r.label}</span>
+                        <span className="text-muted">
+                          {r.date ? `platné do ${formatDate(r.date)}` : "termín nezadán"}
+                        </span>
+                      </div>
+                      <div className={`relative h-1 rounded-full ${trackColor[status]}`}>
+                        <span
+                          className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-2 h-2 rounded-full ${statusColor[status]}`}
+                          style={{ left: `${progress}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
