@@ -15,6 +15,7 @@ const VehicleCreateSchema = z.object({
   vignetteValidUntil: z.string().datetime().optional(),
   insuranceLiabilityValidUntil: z.string().datetime().optional(),
   insuranceProvider: z.string().optional(),
+  parkingCardValidUntil: z.string().datetime().optional(),
 });
 
 // GET /api/vehicles — admin/accountant see the whole fleet, driver sees only assigned vehicles
@@ -70,6 +71,9 @@ export async function POST(req: Request) {
         : undefined,
       insuranceLiabilityValidUntil: parsed.data.insuranceLiabilityValidUntil
         ? new Date(parsed.data.insuranceLiabilityValidUntil)
+        : undefined,
+      parkingCardValidUntil: parsed.data.parkingCardValidUntil
+        ? new Date(parsed.data.parkingCardValidUntil)
         : undefined,
     },
   });

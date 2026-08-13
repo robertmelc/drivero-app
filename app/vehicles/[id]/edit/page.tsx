@@ -32,6 +32,7 @@ export default function EditVehiclePage() {
     vignetteValidUntil: "",
     insuranceLiabilityValidUntil: "",
     insuranceProvider: "",
+    parkingCardValidUntil: "",
   });
 
   useEffect(() => {
@@ -56,6 +57,7 @@ export default function EditVehiclePage() {
           vignetteValidUntil: toDateInput(v.vignetteValidUntil),
           insuranceLiabilityValidUntil: toDateInput(v.insuranceLiabilityValidUntil),
           insuranceProvider: v.insuranceProvider ?? "",
+          parkingCardValidUntil: toDateInput(v.parkingCardValidUntil),
         });
       })
       .catch(() => setError("Vozidlo se nepodařilo načíst"))
@@ -93,6 +95,7 @@ export default function EditVehiclePage() {
           vignetteValidUntil: toIso(form.vignetteValidUntil),
           insuranceLiabilityValidUntil: toIso(form.insuranceLiabilityValidUntil),
           insuranceProvider: form.insuranceProvider || null,
+          parkingCardValidUntil: toIso(form.parkingCardValidUntil),
         }),
       });
       const data = await res.json();
@@ -207,6 +210,10 @@ export default function EditVehiclePage() {
               <div>
                 <label className={labelClass}>Dálniční známka platná do</label>
                 <input type="date" value={form.vignetteValidUntil} onChange={(e) => update("vignetteValidUntil", e.target.value)} className={inputClass} />
+              </div>
+              <div>
+                <label className={labelClass}>Parkovací karta platná do</label>
+                <input type="date" value={form.parkingCardValidUntil} onChange={(e) => update("parkingCardValidUntil", e.target.value)} className={inputClass} />
               </div>
               <div>
                 <label className={labelClass}>Povinné ručení platné do</label>

@@ -44,6 +44,7 @@ export default async function VehicleDetailPage({ params }: { params: { id: stri
     { icon: "🛡️", label: "Pojištění", date: vehicle.insuranceLiabilityValidUntil },
     { icon: "⚠️", label: "STK", date: vehicle.stkValidUntil },
     { icon: "🎫", label: "Dálniční známka", date: vehicle.vignetteValidUntil },
+    { icon: "🅿️", label: "Parkovací karta", date: vehicle.parkingCardValidUntil },
   ];
 
   const lastProtocol = vehicle.handoverProtocols[0];
@@ -73,7 +74,7 @@ export default async function VehicleDetailPage({ params }: { params: { id: stri
           <div>
             <div className="font-mono text-sm font-bold text-muted">{vehicle.spz}</div>
             <h1 className="text-2xl font-extrabold">{vehicle.make} {vehicle.model}</h1>
-            {session.role === "admin" && (
+            {["admin", "accountant"].includes(session.role) && (
               <Link href={`/vehicles/${vehicle.id}/edit`} className="text-signal font-bold text-xs">
                 ✏️ Upravit vozidlo
               </Link>
@@ -99,7 +100,7 @@ export default async function VehicleDetailPage({ params }: { params: { id: stri
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mb-8">
           {rows.map((r) => {
             const status = getDeadlineStatus(r.date);
             return (

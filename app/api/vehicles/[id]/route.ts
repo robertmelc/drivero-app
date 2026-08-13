@@ -44,13 +44,14 @@ const VehicleUpdateSchema = z.object({
   vignetteValidUntil: z.string().datetime().nullable().optional(),
   insuranceLiabilityValidUntil: z.string().datetime().nullable().optional(),
   insuranceProvider: z.string().nullable().optional(),
+  parkingCardValidUntil: z.string().datetime().nullable().optional(),
 });
 
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   const { session, error } = await requireSession();
   if (error) return error;
-  if (!requireRole(session, ["admin"])) {
-    return Response.json({ error: "Pouze administrátor může upravovat vozidla" }, { status: 403 });
+  if (!requireRole(session, ["admin", "accountant"])) {
+    return Response.json({ error: "Pouze administrátor nebo účetní může upravovat vozidla" }, { status: 403 });
   }
 
   const existing = await prisma.vehicle.findFirst({
@@ -71,6 +72,9 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     insuranceLiabilityValidUntil: parsed.data.insuranceLiabilityValidUntil
       ? new Date(parsed.data.insuranceLiabilityValidUntil)
       : parsed.data.insuranceLiabilityValidUntil,
+    parkingCardValidUntil: parsed.data.parkingCardValidUntil
+      ? new Date(parsed.data.parkingCardValidUntil)
+      : parsed.data.parkingCardValidUntil,
   };
 
   const vehicle = await prisma.vehicle.update({ where: { id: params.id }, data });

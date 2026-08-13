@@ -23,6 +23,7 @@ export default function NewVehiclePage() {
     vignetteValidUntil: "",
     insuranceLiabilityValidUntil: "",
     insuranceProvider: "",
+    parkingCardValidUntil: "",
   });
 
   function update<K extends keyof typeof form>(key: K, value: string) {
@@ -56,6 +57,7 @@ export default function NewVehiclePage() {
           vignetteValidUntil: toIso(form.vignetteValidUntil),
           insuranceLiabilityValidUntil: toIso(form.insuranceLiabilityValidUntil),
           insuranceProvider: form.insuranceProvider || undefined,
+          parkingCardValidUntil: toIso(form.parkingCardValidUntil),
         }),
       });
       const data = await res.json();
@@ -154,7 +156,7 @@ export default function NewVehiclePage() {
 
           <div className="glass-panel p-6">
             <h2 className="text-xs uppercase tracking-wide text-muted font-bold mb-4">Platnosti a termíny</h2>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className={labelClass}>STK platná do</label>
                 <input type="date" value={form.stkValidUntil} onChange={(e) => update("stkValidUntil", e.target.value)} className={inputClass} />
@@ -162,6 +164,10 @@ export default function NewVehiclePage() {
               <div>
                 <label className={labelClass}>Dálniční známka platná do</label>
                 <input type="date" value={form.vignetteValidUntil} onChange={(e) => update("vignetteValidUntil", e.target.value)} className={inputClass} />
+              </div>
+              <div>
+                <label className={labelClass}>Parkovací karta platná do</label>
+                <input type="date" value={form.parkingCardValidUntil} onChange={(e) => update("parkingCardValidUntil", e.target.value)} className={inputClass} />
               </div>
               <div>
                 <label className={labelClass}>Povinné ručení platné do</label>
