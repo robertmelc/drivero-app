@@ -73,6 +73,11 @@ export default async function VehicleDetailPage({ params }: { params: { id: stri
           <div>
             <div className="font-mono text-sm font-bold text-muted">{vehicle.spz}</div>
             <h1 className="text-2xl font-extrabold">{vehicle.make} {vehicle.model}</h1>
+            {session.role === "admin" && (
+              <Link href={`/vehicles/${vehicle.id}/edit`} className="text-signal font-bold text-xs">
+                ✏️ Upravit vozidlo
+              </Link>
+            )}
             <div className="text-sm text-muted mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
               Přiřazeno: {vehicle.assignments[0]?.user?.email || "— nepřiřazeno —"}
               {session.role === "admin" && (
