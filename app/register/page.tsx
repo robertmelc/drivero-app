@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { GaugeIcon, CarSideIcon } from "@/components/icons";
+import { PasswordInput } from "@/components/password-input";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -141,12 +142,11 @@ export default function RegisterPage() {
             </div>
             <div>
               <label className="block text-[11px] uppercase tracking-wide text-muted mb-1.5">Heslo</label>
-              <input
-                type="password"
+              <PasswordInput
                 required
                 minLength={8}
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={setPassword}
                 placeholder="min. 8 znaků"
                 className="w-full border border-white/10 rounded-lg px-3.5 py-2.5 text-sm bg-white/5 text-ink focus:outline-none focus:ring-2 focus:ring-border-green"
               />

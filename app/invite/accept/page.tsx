@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { GaugeIcon } from "@/components/icons";
+import { PasswordInput } from "@/components/password-input";
 
 export default function InviteAcceptPage() {
   return (
@@ -74,12 +75,11 @@ function InviteAcceptForm() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-[11px] uppercase tracking-wide text-muted mb-1.5">Nové heslo</label>
-              <input
-                type="password"
+              <PasswordInput
                 required
                 minLength={8}
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={setPassword}
                 placeholder="min. 8 znaků"
                 className="w-full border border-white/10 rounded-lg px-3.5 py-2.5 text-sm bg-white/5 text-ink focus:outline-none focus:ring-2 focus:ring-border-green"
               />
