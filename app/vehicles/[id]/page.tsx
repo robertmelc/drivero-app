@@ -153,6 +153,9 @@ export default async function VehicleDetailPage({ params }: { params: { id: stri
           <div>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-base font-bold">Předávací protokol</h2>
+              <Link href={`/vehicles/${vehicle.id}/handover`} className="text-xs font-bold text-signal">
+                Zobrazit všechny →
+              </Link>
             </div>
             <div className="glass-panel p-4 mb-3">
               {!lastProtocol ? (
