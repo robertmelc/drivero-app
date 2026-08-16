@@ -102,3 +102,27 @@ export async function verifyInviteToken(token: string): Promise<{ userId: string
     return null;
   }
 }
+
+// --- Membership selection tokens ---
+// Issued after a password check when the user has more than one CompanyMembership.
+// Short-lived and single-purpose, same pattern as invite tokens — proves the
+// password was already verified without re-sending it when the user picks a
+// company/role a moment later.
+
+export async function createMembershipSelectionToken(userId: string): Promise<string> {
+  return new SignJWT({ userId, purpose: "membership-select" })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime("10m")
+    .sign(JWT_SECRET);
+}
+
+export async function verifyMembershipSelectionToken(token: string): Promise<{ userId: string } | null> {
+  try {
+    const { payload } = await jwtVerify(token, JWT_SECRET);
+    if (payload.purpose !== "membership-select" || typeof payload.userId !== "string") return null;
+    return { userId: payload.userId };
+  } catch {
+    return null;
+  }
+}

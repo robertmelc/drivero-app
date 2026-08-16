@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { verifyPassword, createSessionToken, setSessionCookie } from "@/lib/auth";
+import { verifyPassword, createSessionToken, setSessionCookie, createMembershipSelectionToken } from "@/lib/auth";
 
 const LoginSchema = z.object({
   email: z.string().email(),
@@ -27,6 +27,39 @@ export async function POST(req: Request) {
     return Response.json({ error: "Nesprávný e-mail nebo heslo" }, { status: 401 });
   }
 
+  const memberships = await prisma.companyMembership.findMany({
+    where: { userId: user.id },
+    include: { company: { select: { name: true } } },
+  });
+
+  // Exactly one membership — behaves exactly like today, straight to a session.
+  if (memberships.length === 1) {
+    const m = memberships[0];
+    const token = await createSessionToken({
+      userId: user.id,
+      companyId: m.companyId,
+      role: m.role,
+      email: user.email,
+    });
+    await setSessionCookie(token);
+    return Response.json({ user: { id: user.id, email: user.email, role: m.role } });
+  }
+
+  // More than one — password is verified, but don't set a session yet; the
+  // client picks a company/role first via /api/auth/select-membership.
+  if (memberships.length > 1) {
+    const selectionToken = await createMembershipSelectionToken(user.id);
+    return Response.json({
+      selectionRequired: true,
+      selectionToken,
+      memberships: memberships.map((m) => ({ id: m.id, companyName: m.company.name, role: m.role })),
+    });
+  }
+
+  // No membership rows yet — happens for anyone registered/invited before the
+  // CompanyMembership backfill, or before phase 3 wires membership creation
+  // into register/invite. Fall back to the legacy fields so login keeps
+  // working exactly as before until that's in place.
   const token = await createSessionToken({
     userId: user.id,
     companyId: user.companyId,
@@ -34,6 +67,5 @@ export async function POST(req: Request) {
     email: user.email,
   });
   await setSessionCookie(token);
-
   return Response.json({ user: { id: user.id, email: user.email, role: user.role } });
 }

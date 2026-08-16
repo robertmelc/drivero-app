@@ -32,6 +32,13 @@ export default function LoginPage() {
         return;
       }
 
+      if (data.selectionRequired) {
+        sessionStorage.setItem("selectionToken", data.selectionToken);
+        sessionStorage.setItem("memberships", JSON.stringify(data.memberships));
+        router.push("/login/choose-company");
+        return;
+      }
+
       router.push(data.user.role === "driver" ? "/driver" : "/dashboard");
       router.refresh();
     } catch {
