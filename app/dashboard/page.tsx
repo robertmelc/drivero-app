@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { GaugeIcon } from "@/components/icons";
 import { LogoutButton } from "@/components/logout-button";
+import { CompanySwitcher } from "@/components/company-switcher";
 import { getDeadlineStatus } from "@/lib/deadlines";
 
 export default async function DashboardPage() {
@@ -61,7 +62,10 @@ export default async function DashboardPage() {
             <GaugeIcon size={24} /> DRIVER
             <span className="inline-block w-2 h-2 rounded-full bg-signal shadow-[0_0_8px_rgba(52,227,122,0.7)]" />
           </div>
-          <LogoutButton />
+          <div className="flex items-center gap-3">
+            <CompanySwitcher />
+            <LogoutButton />
+          </div>
         </div>
 
         <div className="glass-panel p-8 mb-6">

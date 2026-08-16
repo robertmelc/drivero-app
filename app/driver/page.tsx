@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { GaugeIcon, CarSideIcon } from "@/components/icons";
 import { LogoutButton } from "@/components/logout-button";
+import { CompanySwitcher } from "@/components/company-switcher";
 import { getDeadlineStatus, getDeadlineProgress, statusColor, formatDate } from "@/lib/deadlines";
 
 const trackColor: Record<string, string> = {
@@ -18,8 +19,11 @@ export default async function DriverPage() {
   if (!session) redirect("/login");
   if (session.role !== "driver") redirect("/dashboard");
 
+  // Scoped to the vehicle's company, not just the driver — the same person can
+  // have an open assignment in more than one company they're a member of, and
+  // only the one for the currently active company/session should show here.
   const assignment = await prisma.vehicleAssignment.findFirst({
-    where: { userId: session.userId, validTo: null },
+    where: { userId: session.userId, validTo: null, vehicle: { companyId: session.companyId } },
     include: { vehicle: true },
   });
 
@@ -62,7 +66,10 @@ export default async function DriverPage() {
             <GaugeIcon size={22} /> DRIVER
             <span className="inline-block w-2 h-2 rounded-full bg-signal shadow-[0_0_8px_rgba(52,227,122,0.7)]" />
           </div>
-          <LogoutButton />
+          <div className="flex items-center gap-3">
+            <CompanySwitcher />
+            <LogoutButton />
+          </div>
         </div>
 
         <div className="mb-4">
