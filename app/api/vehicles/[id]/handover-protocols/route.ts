@@ -55,10 +55,14 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   }
   const data = parsed.data;
 
-  const driver = await prisma.user.findFirst({
-    where: { id: data.userId, companyId: session.companyId, role: "driver" },
+  // Scoped via CompanyMembership, not the user's legacy companyId/role — a
+  // driver invited into this company from elsewhere won't have this company
+  // as their default, only a membership row.
+  const membership = await prisma.companyMembership.findFirst({
+    where: { userId: data.userId, companyId: session.companyId, role: "driver" },
   });
-  if (!driver) return Response.json({ error: "Řidič nenalezen" }, { status: 404 });
+  if (!membership) return Response.json({ error: "Řidič nenalezen" }, { status: 404 });
+  const driver = { id: membership.userId };
 
   const now = new Date();
 

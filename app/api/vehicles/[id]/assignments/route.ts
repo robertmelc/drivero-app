@@ -23,10 +23,14 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   });
   if (!vehicle) return Response.json({ error: "Vozidlo nenalezeno" }, { status: 404 });
 
-  const driver = await prisma.user.findFirst({
-    where: { id: parsed.data.userId, companyId: session.companyId, role: "driver" },
+  // Scoped via CompanyMembership, not the user's legacy companyId/role — a
+  // driver invited into this company from elsewhere won't have this company
+  // as their default, only a membership row.
+  const membership = await prisma.companyMembership.findFirst({
+    where: { userId: parsed.data.userId, companyId: session.companyId, role: "driver" },
   });
-  if (!driver) return Response.json({ error: "Řidič nenalezen" }, { status: 404 });
+  if (!membership) return Response.json({ error: "Řidič nenalezen" }, { status: 404 });
+  const driver = { id: membership.userId };
 
   const assignment = await prisma.$transaction(async (tx) => {
     // Close any currently open assignment for this vehicle

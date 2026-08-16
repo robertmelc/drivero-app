@@ -28,23 +28,31 @@ export async function POST(req: Request) {
 
   const passwordHash = await hashPassword(password);
 
-  const company = await prisma.company.create({
-    data: {
-      name: companyName,
-      ico,
-      users: {
-        create: {
-          email,
-          passwordHash,
-          role: "admin",
-          status: "active",
-          startedAt: new Date(),
-          // Name is stored as a single field for simplicity here;
-          // split into first/last name if your form collects them separately.
+  const company = await prisma.$transaction(async (tx) => {
+    const company = await tx.company.create({
+      data: {
+        name: companyName,
+        ico,
+        users: {
+          create: {
+            email,
+            passwordHash,
+            role: "admin",
+            status: "active",
+            startedAt: new Date(),
+            // Name is stored as a single field for simplicity here;
+            // split into first/last name if your form collects them separately.
+          },
         },
       },
-    },
-    include: { users: true },
+      include: { users: true },
+    });
+
+    await tx.companyMembership.create({
+      data: { userId: company.users[0].id, companyId: company.id, role: "admin" },
+    });
+
+    return company;
   });
 
   const admin = company.users[0];
