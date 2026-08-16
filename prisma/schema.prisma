@@ -98,6 +98,7 @@ model Company {
   updatedAt       DateTime @updatedAt @map("updated_at")
 
   users           User[]
+  memberships     CompanyMembership[]
   vehicles        Vehicle[]
   documents       Document[]
   notifications   Notification[]
@@ -125,9 +126,31 @@ model User {
   documentsUploaded   Document[]
   auditLogs           AuditLog[]
   fuelExpenses        FuelExpense[]
+  memberships         CompanyMembership[]
 
   @@index([companyId])
   @@map("users")
+}
+
+// One row per (company, role) a user belongs to. `User.companyId`/`role` remain
+// the user's default/legacy membership for now — this table is additive and
+// doesn't change login behavior yet (that's phase 2). A user with exactly one
+// membership behaves identically to today; more than one enables the future
+// company/role switcher.
+model CompanyMembership {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  companyId String   @map("company_id")
+  role      UserRole
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, companyId, role])
+  @@index([userId])
+  @@index([companyId])
+  @@map("company_memberships")
 }
 
 model Vehicle {
