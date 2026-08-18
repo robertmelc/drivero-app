@@ -34,24 +34,20 @@ export default async function SuperadminPage() {
         <p className="text-[11.5px] font-extrabold tracking-[0.14em] uppercase text-signal mb-2">Superadmin</p>
         <h1 className="text-2xl font-extrabold mb-8">Přehled napříč všemi firmami</h1>
 
-        <Link
-          href="/superadmin/companies"
-          className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-2 hover:opacity-90 transition-opacity"
-        >
-          <div className="glass-panel p-5">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
+          <Link href="/superadmin/companies" className="glass-panel p-5 block hover:opacity-90 transition-opacity">
             <div className="font-mono text-2xl font-extrabold">{companyCount}</div>
             <div className="text-[11px] uppercase text-muted mt-1">Firem</div>
-          </div>
-          <div className="glass-panel p-5">
+          </Link>
+          <Link href="/superadmin/vehicles" className="glass-panel p-5 block hover:opacity-90 transition-opacity">
             <div className="font-mono text-2xl font-extrabold">{vehicleCount}</div>
             <div className="text-[11px] uppercase text-muted mt-1">Vozidel</div>
-          </div>
-          <div className="glass-panel p-5">
+          </Link>
+          <Link href="/superadmin/users" className="glass-panel p-5 block hover:opacity-90 transition-opacity">
             <div className="font-mono text-2xl font-extrabold">{userCount}</div>
             <div className="text-[11px] uppercase text-muted mt-1">Uživatelů</div>
-          </div>
-        </Link>
-        <p className="text-xs text-muted mb-8">Klikněte pro procházení jednotlivých firem →</p>
+          </Link>
+        </div>
 
         <Link
           href="/superadmin/companies"
