@@ -20,6 +20,8 @@ export default async function VehiclesPage() {
     },
   });
 
+  const currentMonth = new Date().toISOString().slice(0, 7);
+
   return (
     <main className="relative min-h-screen px-6 py-8">
       <div className="mesh-bg">
@@ -47,6 +49,20 @@ export default async function VehiclesPage() {
             >
               ⬇ Export knihy jízd (celá firma)
             </a>
+            <form action="/api/vehicles/export-accounting" method="GET" className="flex items-center gap-2">
+              <input
+                type="month"
+                name="month"
+                defaultValue={currentMonth}
+                className="px-3 py-2.5 rounded-lg text-sm bg-white/5 border border-white/10 text-ink focus:outline-none focus:ring-2 focus:ring-border-green"
+              />
+              <button
+                type="submit"
+                className="px-4 py-2.5 rounded-lg text-sm font-bold text-signal border border-border-green whitespace-nowrap"
+              >
+                ⬇ Export pro účetní
+              </button>
+            </form>
             <Link
               href="/vehicles/new"
               className="px-4 py-2.5 rounded-lg text-sm font-extrabold text-black bg-gradient-to-br from-signal to-signal-dim shadow-[0_8px_24px_rgba(52,227,122,0.25)]"
