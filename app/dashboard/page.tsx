@@ -78,16 +78,31 @@ export default async function DashboardPage() {
           </p>
         </div>
 
-        <Link
-          href="/vehicles"
-          className="glass-panel p-6 flex items-center justify-between hover:border-border-green transition-colors mb-6"
-        >
-          <div>
-            <div className="font-bold text-base mb-1">Vozový park</div>
-            <div className="text-sm text-muted">Přehled vozidel, termíny a přidání nového vozidla</div>
-          </div>
-          <span className="text-signal font-bold text-lg">→</span>
-        </Link>
+        <div className={`grid grid-cols-1 ${session.role === "admin" ? "sm:grid-cols-2" : ""} gap-4 mb-6`}>
+          <Link
+            href="/vehicles"
+            className="glass-panel p-6 flex items-center justify-between hover:border-border-green transition-colors"
+          >
+            <div>
+              <div className="font-bold text-base mb-1">Vozový park</div>
+              <div className="text-sm text-muted">Přehled vozidel, termíny a přidání nového vozidla</div>
+            </div>
+            <span className="text-signal font-bold text-lg">→</span>
+          </Link>
+
+          {session.role === "admin" && (
+            <Link
+              href="/settings/team"
+              className="glass-panel p-6 flex items-center justify-between hover:border-border-green transition-colors"
+            >
+              <div>
+                <div className="font-bold text-base mb-1">Tým</div>
+                <div className="text-sm text-muted">Členové firmy a pozvání účetní nebo řidiče</div>
+              </div>
+              <span className="text-signal font-bold text-lg">→</span>
+            </Link>
+          )}
+        </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="glass-panel p-4">
