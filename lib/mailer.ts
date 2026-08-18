@@ -29,3 +29,39 @@ export async function sendDriverInviteEmail(to: string, inviteUrl: string, compa
 
   if (error) throw new Error(`Odeslání e-mailu selhalo: ${error.message}`);
 }
+
+const ROLE_LABELS_CS: Record<string, string> = {
+  admin: "administrátor",
+  accountant: "účetní",
+  driver: "řidič",
+};
+
+// For someone who already has a Drivero account elsewhere and was just added
+// to another company — no password to set, so this skips the invite-link flow
+// entirely and just points them at the regular login.
+export async function sendCompanyAddedEmail(to: string, companyName: string, role: string, appUrl: string) {
+  const roleLabel = ROLE_LABELS_CS[role] ?? role;
+  const { error } = await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Byli jste přidáni k firmě ${companyName} — Drivero`,
+    html: `
+      <div style="font-family: -apple-system, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px; background: #05070A; color: #E9F3EC;">
+        <p style="font-size: 13px; letter-spacing: 0.12em; font-weight: 800; color: #34E37A; margin: 0 0 24px;">DRIVER</p>
+        <h1 style="font-size: 20px; margin: 0 0 12px;">Byli jste přidáni k nové firmě</h1>
+        <p style="font-size: 14px; line-height: 1.6; color: #8FA69B; margin: 0 0 24px;">
+          Byli jste přidáni k firmě <strong style="color:#E9F3EC">${companyName}</strong> jako <strong style="color:#E9F3EC">${roleLabel}</strong> v appce Drivero.
+          Přihlaste se svým stávajícím heslem — pokud jste členem víc firem, appka vám po přihlášení nabídne výběr.
+        </p>
+        <a href="${appUrl}/login" style="display:inline-block; background: linear-gradient(135deg, #34E37A, #1F9D57); color: #05070A; font-weight: 800; font-size: 14px; padding: 12px 28px; border-radius: 10px; text-decoration: none;">
+          Přihlásit se
+        </a>
+        <p style="font-size: 12px; color: #8FA69B; margin: 24px 0 0;">
+          Pokud jste toto přidání nečekali, můžete e-mail ignorovat.
+        </p>
+      </div>
+    `,
+  });
+
+  if (error) throw new Error(`Odeslání e-mailu selhalo: ${error.message}`);
+}

@@ -2,7 +2,7 @@ import { z } from "zod";
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { requireSession, requireRole, hashPassword, createInviteToken } from "@/lib/auth";
-import { sendDriverInviteEmail } from "@/lib/mailer";
+import { sendDriverInviteEmail, sendCompanyAddedEmail } from "@/lib/mailer";
 
 const UserCreateSchema = z.object({
   email: z.string().email(),
@@ -44,8 +44,9 @@ export async function GET() {
 //   person can set their own password and log in themselves.
 // - E-mail already belongs to someone at THIS company: 409, no duplicate.
 // - E-mail belongs to someone at a DIFFERENT company: that's just a second
-//   membership on their existing account — no new user, no new password, no
-//   invite e-mail (they already have a working login). They'll see the
+//   membership on their existing account — no new user, no new password.
+//   They get a short "added to a company" e-mail (not the invite/set-password
+//   one) since they already have a working login. They'll see the
 //   company/role picker next time they log in (see /api/auth/login).
 export async function POST(req: Request) {
   const { session, error } = await requireSession();
@@ -76,6 +77,23 @@ export async function POST(req: Request) {
     await prisma.companyMembership.create({
       data: { userId: existing.id, companyId: session.companyId, role: parsed.data.role },
     });
+
+    const appUrl = process.env.APP_URL || "http://localhost:3000";
+    try {
+      await sendCompanyAddedEmail(existing.email, company.name, parsed.data.role, appUrl);
+    } catch (e) {
+      // The membership exists either way — surface the mail failure separately
+      // so the admin knows to tell the person manually, without losing it.
+      return Response.json(
+        {
+          user: { id: existing.id, email: existing.email, role: parsed.data.role },
+          message:
+            "Existující uživatel byl přidán k vaší firmě. Přihlásí se svým stávajícím heslem a appka mu nabídne výběr firmy.",
+          mailError: e instanceof Error ? e.message : "Odeslání e-mailu selhalo",
+        },
+        { status: 201 }
+      );
+    }
 
     return Response.json(
       {
