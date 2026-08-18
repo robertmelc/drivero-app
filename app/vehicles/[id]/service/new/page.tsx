@@ -105,7 +105,7 @@ export default function NewServiceRecordPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className={labelClass}>Datum</label>
-              <input type="date" required value={form.serviceDate} onChange={(e) => update("serviceDate", e.target.value)} className={`${inputClass} font-mono`} />
+              <input type="date" required value={form.serviceDate} onChange={(e) => update("serviceDate", e.target.value)} className={inputClass} />
             </div>
             <div>
               <label className={labelClass}>Stav tachometru (km)</label>

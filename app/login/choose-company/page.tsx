@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { GaugeIcon } from "@/components/icons";
 
-type Membership = { id: string; companyName: string; role: string };
+type Vehicle = { spz: string; make: string; model: string } | null;
+type Membership = { id: string; companyName: string; role: string; vehicle?: Vehicle };
 
 const ROLE_LABELS: Record<string, string> = {
   admin: "Administrátor",
@@ -91,7 +92,10 @@ export default function ChooseCompanyPage() {
             >
               <div>
                 <div className="text-sm font-bold">{m.companyName}</div>
-                <div className="text-xs text-muted">{ROLE_LABELS[m.role] ?? m.role}</div>
+                <div className="text-xs text-muted">
+                  {ROLE_LABELS[m.role] ?? m.role}
+                  {m.vehicle && ` · ${m.vehicle.spz} · ${m.vehicle.make} ${m.vehicle.model}`}
+                </div>
               </div>
               <span className="text-signal font-bold text-lg">{selectingId === m.id ? "…" : "→"}</span>
             </button>

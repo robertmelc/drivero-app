@@ -137,7 +137,7 @@ function NewFuelExpenseForm() {
                   required
                   value={form.expenseDate}
                   onChange={(e) => update("expenseDate", e.target.value)}
-                  className={`${inputClass} font-mono`}
+                  className={inputClass}
                 />
               </div>
 

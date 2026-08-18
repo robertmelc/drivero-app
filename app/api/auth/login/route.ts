@@ -49,10 +49,27 @@ export async function POST(req: Request) {
   // client picks a company/role first via /api/auth/select-membership.
   if (memberships.length > 1) {
     const selectionToken = await createMembershipSelectionToken(user.id);
+
+    // For driver memberships, show which vehicle it is — company name alone
+    // doesn't help a driver tell two memberships apart at a glance.
+    const driverCompanyIds = memberships.filter((m) => m.role === "driver").map((m) => m.companyId);
+    const assignments = driverCompanyIds.length
+      ? await prisma.vehicleAssignment.findMany({
+          where: { userId: user.id, validTo: null, vehicle: { companyId: { in: driverCompanyIds } } },
+          include: { vehicle: { select: { spz: true, make: true, model: true, companyId: true } } },
+        })
+      : [];
+    const vehicleByCompanyId = new Map(assignments.map((a) => [a.vehicle.companyId, a.vehicle]));
+
     return Response.json({
       selectionRequired: true,
       selectionToken,
-      memberships: memberships.map((m) => ({ id: m.id, companyName: m.company.name, role: m.role })),
+      memberships: memberships.map((m) => ({
+        id: m.id,
+        companyName: m.company.name,
+        role: m.role,
+        vehicle: m.role === "driver" ? vehicleByCompanyId.get(m.companyId) ?? null : null,
+      })),
     });
   }
 

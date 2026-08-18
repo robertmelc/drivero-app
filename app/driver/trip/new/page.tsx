@@ -112,7 +112,7 @@ function NewTripForm() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className={labelClass}>Datum</label>
-              <input type="date" required value={form.tripDate} onChange={(e) => update("tripDate", e.target.value)} className={`${inputClass} font-mono`} />
+              <input type="date" required value={form.tripDate} onChange={(e) => update("tripDate", e.target.value)} className={inputClass} />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
