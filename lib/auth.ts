@@ -82,22 +82,28 @@ export function requireRole(session: SessionPayload, roles: SessionPayload["role
 }
 
 /**
- * Platform-level guard, deliberately NOT based on the JWT session payload —
- * isSuperAdmin isn't in there and never will be, so this always re-checks the
- * database on every request. Slightly slower than requireSession(), but stays
- * completely independent of the session/membership shape, whatever it becomes.
+ * Deliberately NOT based on the JWT session payload — isSuperAdmin isn't in
+ * there and never will be, so this always re-checks the database. Used both
+ * by requireSuperAdmin() (the /superadmin section) and, standalone, by
+ * company-scoped lookups that want to fall back to a cross-company view for
+ * a superadmin once their own-company query comes up empty.
  */
+export async function checkIsSuperAdmin(userId: string): Promise<boolean> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { isSuperAdmin: true },
+  });
+  return user?.isSuperAdmin ?? false;
+}
+
+/** Platform-level guard for pages/routes that are superadmin-only outright. */
 export async function requireSuperAdmin(): Promise<
   { session: SessionPayload; error: null } | { session: null; error: Response }
 > {
   const { session, error } = await requireSession();
   if (error) return { session: null, error };
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.userId },
-    select: { isSuperAdmin: true },
-  });
-  if (!user?.isSuperAdmin) {
+  if (!(await checkIsSuperAdmin(session.userId))) {
     return { session: null, error: Response.json({ error: "Forbidden" }, { status: 403 }) };
   }
 

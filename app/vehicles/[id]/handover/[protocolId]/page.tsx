@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getSession } from "@/lib/auth";
+import { getSession, checkIsSuperAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { GaugeIcon } from "@/components/icons";
 import { formatDate } from "@/lib/deadlines";
@@ -14,13 +14,21 @@ export default async function HandoverProtocolDetailPage({
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const protocol = await prisma.handoverProtocol.findFirst({
+  let protocol = await prisma.handoverProtocol.findFirst({
     where: { id: params.protocolId, vehicle: { companyId: session.companyId } },
     include: { vehicle: true, driver: { select: { email: true } } },
   });
+  let viewingAsSuperAdmin = false;
+  if (!protocol && (await checkIsSuperAdmin(session.userId))) {
+    protocol = await prisma.handoverProtocol.findFirst({
+      where: { id: params.protocolId, vehicleId: params.id },
+      include: { vehicle: true, driver: { select: { email: true } } },
+    });
+    viewingAsSuperAdmin = true;
+  }
   if (!protocol) redirect(`/vehicles/${params.id}/handover`);
 
-  if (session.role === "driver" && protocol.userId !== session.userId) {
+  if (!viewingAsSuperAdmin && session.role === "driver" && protocol.userId !== session.userId) {
     redirect("/driver");
   }
 
@@ -45,6 +53,12 @@ export default async function HandoverProtocolDetailPage({
           </Link>
           <PrintButton />
         </div>
+
+        {viewingAsSuperAdmin && (
+          <div className="glass-panel px-4 py-2.5 mb-4 border border-signal/30 bg-signal/5 flex items-center gap-2 text-xs font-bold text-signal print:hidden">
+            ⚙ Prohlížíte jako superadmin
+          </div>
+        )}
 
         <Link
           href={`/vehicles/${params.id}/handover`}

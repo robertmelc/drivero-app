@@ -3,21 +3,15 @@ import { redirect } from "next/navigation";
 import { requireSuperAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { GaugeIcon } from "@/components/icons";
-import { getDeadlineStatus, statusColor } from "@/lib/deadlines";
 
 export default async function SuperadminPage() {
   const { error } = await requireSuperAdmin();
   if (error) redirect("/dashboard");
 
-  const [companies, vehicles] = await Promise.all([
-    prisma.company.findMany({
-      include: { _count: { select: { vehicles: true } } },
-      orderBy: { name: "asc" },
-    }),
-    prisma.vehicle.findMany({
-      include: { company: { select: { name: true } } },
-      orderBy: [{ company: { name: "asc" } }, { spz: "asc" }],
-    }),
+  const [companyCount, vehicleCount, userCount] = await Promise.all([
+    prisma.company.count(),
+    prisma.vehicle.count(),
+    prisma.user.count(),
   ]);
 
   return (
@@ -40,62 +34,31 @@ export default async function SuperadminPage() {
         <p className="text-[11.5px] font-extrabold tracking-[0.14em] uppercase text-signal mb-2">Superadmin</p>
         <h1 className="text-2xl font-extrabold mb-8">Přehled napříč všemi firmami</h1>
 
-        <h2 className="text-base font-bold mb-3">
-          Firmy <span className="text-muted font-normal">({companies.length})</span>
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-10">
-          {companies.map((c) => (
-            <div key={c.id} className="glass-panel p-4 flex items-center justify-between">
-              <div>
-                <div className="text-sm font-bold">{c.name}</div>
-                <div className="text-xs text-muted">IČO {c.ico}</div>
-              </div>
-              <div className="text-right">
-                <div className="font-mono text-lg font-extrabold">{c._count.vehicles}</div>
-                <div className="text-[10px] uppercase text-muted">
-                  {c._count.vehicles === 1 ? "vozidlo" : c._count.vehicles >= 2 && c._count.vehicles <= 4 ? "vozidla" : "vozidel"}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        <Link
+          href="/superadmin/companies"
+          className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-2 hover:opacity-90 transition-opacity"
+        >
+          <div className="glass-panel p-5">
+            <div className="font-mono text-2xl font-extrabold">{companyCount}</div>
+            <div className="text-[11px] uppercase text-muted mt-1">Firem</div>
+          </div>
+          <div className="glass-panel p-5">
+            <div className="font-mono text-2xl font-extrabold">{vehicleCount}</div>
+            <div className="text-[11px] uppercase text-muted mt-1">Vozidel</div>
+          </div>
+          <div className="glass-panel p-5">
+            <div className="font-mono text-2xl font-extrabold">{userCount}</div>
+            <div className="text-[11px] uppercase text-muted mt-1">Uživatelů</div>
+          </div>
+        </Link>
+        <p className="text-xs text-muted mb-8">Klikněte pro procházení jednotlivých firem →</p>
 
-        <h2 className="text-base font-bold mb-3">
-          Všechna vozidla <span className="text-muted font-normal">({vehicles.length})</span>
-        </h2>
-        <div className="glass-panel overflow-hidden">
-          {vehicles.length === 0 ? (
-            <div className="p-6 text-center text-sm text-muted">Zatím žádná vozidla.</div>
-          ) : (
-            vehicles.map((v, i) => {
-              const statuses = [
-                getDeadlineStatus(v.stkValidUntil),
-                getDeadlineStatus(v.insuranceLiabilityValidUntil),
-                getDeadlineStatus(v.vignetteValidUntil),
-                getDeadlineStatus(v.parkingCardValidUntil),
-              ];
-              return (
-                <div
-                  key={v.id}
-                  className={`p-4 flex items-center justify-between gap-4 ${i !== 0 ? "border-t border-white/10" : ""}`}
-                >
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-sm font-bold">{v.spz}</span>
-                      <span className="text-sm text-muted truncate">{v.make} {v.model}</span>
-                    </div>
-                    <div className="text-xs text-muted truncate">{v.company.name}</div>
-                  </div>
-                  <div className="flex gap-1.5 shrink-0">
-                    {statuses.map((s, idx) => (
-                      <span key={idx} className={`inline-block w-2 h-2 rounded-full ${statusColor[s]}`} />
-                    ))}
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
+        <Link
+          href="/superadmin/companies"
+          className="inline-block px-5 py-2.5 rounded-lg text-sm font-extrabold text-black bg-gradient-to-br from-signal to-signal-dim"
+        >
+          Zobrazit seznam firem
+        </Link>
       </div>
     </main>
   );

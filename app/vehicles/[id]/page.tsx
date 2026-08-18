@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { getSession } from "@/lib/auth";
+import { getSession, checkIsSuperAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { GaugeIcon } from "@/components/icons";
 import { getDeadlineStatus, formatDate, statusColor } from "@/lib/deadlines";
@@ -23,22 +23,37 @@ export default async function VehicleDetailPage({ params }: { params: { id: stri
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const vehicle = await prisma.vehicle.findFirst({
+  const includeClause = {
+    assignments: { where: { validTo: null }, include: { user: { select: { email: true } } } },
+    serviceRecords: { orderBy: { serviceDate: "desc" as const } },
+    handoverProtocols: { orderBy: { protocolDate: "desc" as const }, take: 1, include: { driver: { select: { email: true } } } },
+    fuelExpenses: { orderBy: { expenseDate: "desc" as const }, take: 5 },
+    company: { select: { name: true } },
+  };
+
+  let vehicle = await prisma.vehicle.findFirst({
     where: { id: params.id, companyId: session.companyId },
-    include: {
-      assignments: { where: { validTo: null }, include: { user: { select: { email: true } } } },
-      serviceRecords: { orderBy: { serviceDate: "desc" } },
-      handoverProtocols: { orderBy: { protocolDate: "desc" }, take: 1, include: { driver: { select: { email: true } } } },
-      fuelExpenses: { orderBy: { expenseDate: "desc" }, take: 5 },
-    },
+    include: includeClause,
   });
+
+  let viewingAsSuperAdmin = false;
+  if (!vehicle && (await checkIsSuperAdmin(session.userId))) {
+    vehicle = await prisma.vehicle.findFirst({
+      where: { id: params.id },
+      include: includeClause,
+    });
+    viewingAsSuperAdmin = true;
+  }
 
   if (!vehicle) notFound();
 
-  if (session.role === "driver") {
+  if (!viewingAsSuperAdmin && session.role === "driver") {
     const isAssigned = vehicle.assignments.some((a) => a.userId === session.userId);
     if (!isAssigned) redirect("/driver");
   }
+
+  const actingAsAdmin = viewingAsSuperAdmin || session.role === "admin";
+  const actingAsManager = viewingAsSuperAdmin || ["admin", "accountant"].includes(session.role);
 
   const rows = [
     { icon: "🛡️", label: "Pojištění", date: vehicle.insuranceLiabilityValidUntil },
@@ -64,8 +79,17 @@ export default async function VehicleDetailPage({ params }: { params: { id: stri
           </Link>
         </div>
 
-        {session.role !== "driver" && (
-          <Link href="/vehicles" className="text-sm text-muted font-semibold mb-5 inline-block">
+        {viewingAsSuperAdmin && (
+          <div className="glass-panel px-4 py-2.5 mb-5 border border-signal/30 bg-signal/5 flex items-center gap-2 text-xs font-bold text-signal">
+            ⚙ Prohlížíte jako superadmin — {vehicle.company.name}
+          </div>
+        )}
+
+        {(viewingAsSuperAdmin || session.role !== "driver") && (
+          <Link
+            href={viewingAsSuperAdmin ? `/superadmin/companies/${vehicle.companyId}` : "/vehicles"}
+            className="text-sm text-muted font-semibold mb-5 inline-block"
+          >
             ← Zpět na přehled
           </Link>
         )}
@@ -74,14 +98,14 @@ export default async function VehicleDetailPage({ params }: { params: { id: stri
           <div>
             <div className="font-mono text-sm font-bold text-muted">{vehicle.spz}</div>
             <h1 className="text-2xl font-extrabold">{vehicle.make} {vehicle.model}</h1>
-            {["admin", "accountant"].includes(session.role) && (
+            {actingAsManager && (
               <Link href={`/vehicles/${vehicle.id}/edit`} className="text-signal font-bold text-xs">
                 ✏️ Upravit vozidlo
               </Link>
             )}
             <div className="text-sm text-muted mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
               Přiřazeno: {vehicle.assignments[0]?.user?.email || "— nepřiřazeno —"}
-              {session.role === "admin" && (
+              {!viewingAsSuperAdmin && session.role === "admin" && (
                 <Link href={`/vehicles/${vehicle.id}/assign`} className="text-signal font-bold text-xs">
                   {vehicle.assignments[0] ? "(změnit)" : "(přiřadit)"}
                 </Link>
@@ -122,7 +146,7 @@ export default async function VehicleDetailPage({ params }: { params: { id: stri
           <div>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-base font-bold">Historie servisu</h2>
-              {session.role === "admin" && (
+              {actingAsAdmin && (
                 <Link
                   href={`/vehicles/${vehicle.id}/service/new`}
                   className="px-3.5 py-2 rounded-lg text-xs font-extrabold text-black bg-gradient-to-br from-signal to-signal-dim"
@@ -172,7 +196,7 @@ export default async function VehicleDetailPage({ params }: { params: { id: stri
                 </>
               )}
             </div>
-            {session.role === "admin" && (
+            {actingAsAdmin && (
               <Link
                 href={`/vehicles/${vehicle.id}/handover/new?driverId=${assignedDriverId}&odometer=${vehicle.odometerKm}`}
                 className="block text-center px-3.5 py-2.5 rounded-lg text-xs font-extrabold text-black bg-gradient-to-br from-signal to-signal-dim"

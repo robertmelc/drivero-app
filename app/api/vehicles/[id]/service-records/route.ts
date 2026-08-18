@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireSession, requireRole } from "@/lib/auth";
+import { requireSession, requireRole, checkIsSuperAdmin } from "@/lib/auth";
 
 const ServiceRecordSchema = z.object({
   type: z.enum(["regular_service", "repair", "tires", "other"]),
@@ -17,9 +17,12 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   const { session, error } = await requireSession();
   if (error) return error;
 
-  const vehicle = await prisma.vehicle.findFirst({
+  let vehicle = await prisma.vehicle.findFirst({
     where: { id: params.id, companyId: session.companyId },
   });
+  if (!vehicle && (await checkIsSuperAdmin(session.userId))) {
+    vehicle = await prisma.vehicle.findFirst({ where: { id: params.id } });
+  }
   if (!vehicle) return Response.json({ error: "Vozidlo nenalezeno" }, { status: 404 });
 
   const records = await prisma.serviceRecord.findMany({
@@ -34,14 +37,22 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   const { session, error } = await requireSession();
   if (error) return error;
-  if (!requireRole(session, ["admin"])) {
-    return Response.json({ error: "Pouze administrátor může přidávat servisní záznamy" }, { status: 403 });
-  }
 
-  const vehicle = await prisma.vehicle.findFirst({
+  let vehicle = await prisma.vehicle.findFirst({
     where: { id: params.id, companyId: session.companyId },
   });
+
+  let viewingAsSuperAdmin = false;
+  if (!vehicle && (await checkIsSuperAdmin(session.userId))) {
+    vehicle = await prisma.vehicle.findFirst({ where: { id: params.id } });
+    viewingAsSuperAdmin = true;
+  }
+
   if (!vehicle) return Response.json({ error: "Vozidlo nenalezeno" }, { status: 404 });
+
+  if (!viewingAsSuperAdmin && !requireRole(session, ["admin"])) {
+    return Response.json({ error: "Pouze administrátor může přidávat servisní záznamy" }, { status: 403 });
+  }
 
   const body = await req.json();
   const parsed = ServiceRecordSchema.safeParse(body);

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireSession } from "@/lib/auth";
+import { requireSession, checkIsSuperAdmin } from "@/lib/auth";
 
 const FuelExpenseCreateSchema = z.object({
   expenseDate: z.string().datetime(),
@@ -15,9 +15,12 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   const { session, error } = await requireSession();
   if (error) return error;
 
-  const vehicle = await prisma.vehicle.findFirst({
+  let vehicle = await prisma.vehicle.findFirst({
     where: { id: params.id, companyId: session.companyId },
   });
+  if (!vehicle && (await checkIsSuperAdmin(session.userId))) {
+    vehicle = await prisma.vehicle.findFirst({ where: { id: params.id } });
+  }
   if (!vehicle) return Response.json({ error: "Vozidlo nenalezeno" }, { status: 404 });
 
   const body = await req.json();
@@ -42,7 +45,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   if (data.photoUrl) {
     const document = await prisma.document.create({
       data: {
-        companyId: session.companyId,
+        companyId: vehicle.companyId,
         ownerType: "fuel_expense",
         ownerId: fuelExpense.id,
         fileUrl: data.photoUrl,

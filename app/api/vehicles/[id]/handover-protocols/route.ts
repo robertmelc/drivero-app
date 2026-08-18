@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireSession } from "@/lib/auth";
+import { requireSession, checkIsSuperAdmin } from "@/lib/auth";
 
 // The schema has no dedicated signature-image columns, only the signedByX booleans/timestamps.
 // We store the actual PNG data URLs (and the photo URLs) inside the existing `photos` Json
@@ -21,9 +21,12 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   const { session, error } = await requireSession();
   if (error) return error;
 
-  const vehicle = await prisma.vehicle.findFirst({
+  let vehicle = await prisma.vehicle.findFirst({
     where: { id: params.id, companyId: session.companyId },
   });
+  if (!vehicle && (await checkIsSuperAdmin(session.userId))) {
+    vehicle = await prisma.vehicle.findFirst({ where: { id: params.id } });
+  }
   if (!vehicle) return Response.json({ error: "Vozidlo nenalezeno" }, { status: 404 });
 
   const protocols = await prisma.handoverProtocol.findMany({
@@ -39,14 +42,22 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   const { session, error } = await requireSession();
   if (error) return error;
-  if (session.role !== "admin") {
-    return Response.json({ error: "Pouze administrátor může vytvořit protokol" }, { status: 403 });
-  }
 
-  const vehicle = await prisma.vehicle.findFirst({
+  let vehicle = await prisma.vehicle.findFirst({
     where: { id: params.id, companyId: session.companyId },
   });
+
+  let viewingAsSuperAdmin = false;
+  if (!vehicle && (await checkIsSuperAdmin(session.userId))) {
+    vehicle = await prisma.vehicle.findFirst({ where: { id: params.id } });
+    viewingAsSuperAdmin = true;
+  }
+
   if (!vehicle) return Response.json({ error: "Vozidlo nenalezeno" }, { status: 404 });
+
+  if (!viewingAsSuperAdmin && session.role !== "admin") {
+    return Response.json({ error: "Pouze administrátor může vytvořit protokol" }, { status: 403 });
+  }
 
   const body = await req.json();
   const parsed = ProtocolSchema.safeParse(body);
@@ -59,7 +70,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   // driver invited into this company from elsewhere won't have this company
   // as their default, only a membership row.
   const membership = await prisma.companyMembership.findFirst({
-    where: { userId: data.userId, companyId: session.companyId, role: "driver" },
+    where: { userId: data.userId, companyId: vehicle.companyId, role: "driver" },
   });
   if (!membership) return Response.json({ error: "Řidič nenalezen" }, { status: 404 });
   const driver = { id: membership.userId };

@@ -1,24 +1,32 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireSession, requireRole } from "@/lib/auth";
+import { requireSession, requireRole, checkIsSuperAdmin } from "@/lib/auth";
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   const { session, error } = await requireSession();
   if (error) return error;
 
-  const vehicle = await prisma.vehicle.findFirst({
+  const includeClause = {
+    assignments: { where: { validTo: null }, include: { user: true } },
+    serviceRecords: { orderBy: { serviceDate: "desc" as const } },
+    handoverProtocols: { orderBy: { protocolDate: "desc" as const }, take: 1 },
+  };
+
+  let vehicle = await prisma.vehicle.findFirst({
     where: { id: params.id, companyId: session.companyId },
-    include: {
-      assignments: { where: { validTo: null }, include: { user: true } },
-      serviceRecords: { orderBy: { serviceDate: "desc" } },
-      handoverProtocols: { orderBy: { protocolDate: "desc" }, take: 1 },
-    },
+    include: includeClause,
   });
+
+  let viewingAsSuperAdmin = false;
+  if (!vehicle && (await checkIsSuperAdmin(session.userId))) {
+    vehicle = await prisma.vehicle.findFirst({ where: { id: params.id }, include: includeClause });
+    viewingAsSuperAdmin = true;
+  }
 
   if (!vehicle) return Response.json({ error: "Vozidlo nenalezeno" }, { status: 404 });
 
   // Drivers may only view a vehicle currently assigned to them
-  if (session.role === "driver") {
+  if (!viewingAsSuperAdmin && session.role === "driver") {
     const isAssigned = vehicle.assignments.some((a) => a.userId === session.userId);
     if (!isAssigned) return Response.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -50,14 +58,22 @@ const VehicleUpdateSchema = z.object({
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   const { session, error } = await requireSession();
   if (error) return error;
-  if (!requireRole(session, ["admin", "accountant"])) {
-    return Response.json({ error: "Pouze administrátor nebo účetní může upravovat vozidla" }, { status: 403 });
-  }
 
-  const existing = await prisma.vehicle.findFirst({
+  let existing = await prisma.vehicle.findFirst({
     where: { id: params.id, companyId: session.companyId },
   });
+
+  let viewingAsSuperAdmin = false;
+  if (!existing && (await checkIsSuperAdmin(session.userId))) {
+    existing = await prisma.vehicle.findFirst({ where: { id: params.id } });
+    viewingAsSuperAdmin = true;
+  }
+
   if (!existing) return Response.json({ error: "Vozidlo nenalezeno" }, { status: 404 });
+
+  if (!viewingAsSuperAdmin && !requireRole(session, ["admin", "accountant"])) {
+    return Response.json({ error: "Pouze administrátor nebo účetní může upravovat vozidla" }, { status: 403 });
+  }
 
   const body = await req.json();
   const parsed = VehicleUpdateSchema.safeParse(body);
@@ -81,7 +97,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 
   await prisma.auditLog.create({
     data: {
-      companyId: session.companyId,
+      companyId: existing.companyId,
       userId: session.userId,
       entityType: "vehicle",
       entityId: vehicle.id,
