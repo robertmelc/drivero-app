@@ -8,11 +8,16 @@ export async function GET() {
   const { session, error } = await requireSession();
   if (error) return error;
 
-  const memberships = await prisma.companyMembership.findMany({
-    where: { userId: session.userId },
-    include: { company: { select: { name: true } } },
-    orderBy: { createdAt: "asc" },
-  });
+  const [memberships, user] = await Promise.all([
+    prisma.companyMembership.findMany({
+      where: { userId: session.userId },
+      include: { company: { select: { name: true } } },
+      orderBy: { createdAt: "asc" },
+    }),
+    // Fresh read, same as requireSuperAdmin() — isSuperAdmin is never in the
+    // JWT, so this is the only way the switcher knows whether to show the link.
+    prisma.user.findUnique({ where: { id: session.userId }, select: { isSuperAdmin: true } }),
+  ]);
 
   return Response.json({
     memberships: memberships.map((m) => ({
@@ -22,5 +27,6 @@ export async function GET() {
       role: m.role,
     })),
     active: { companyId: session.companyId, role: session.role },
+    isSuperAdmin: user?.isSuperAdmin ?? false,
   });
 }

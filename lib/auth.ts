@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
+import { prisma } from "@/lib/prisma";
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "dev-only-secret-change-me"
@@ -78,6 +79,29 @@ export async function requireSession(): Promise<
 
 export function requireRole(session: SessionPayload, roles: SessionPayload["role"][]): boolean {
   return roles.includes(session.role);
+}
+
+/**
+ * Platform-level guard, deliberately NOT based on the JWT session payload —
+ * isSuperAdmin isn't in there and never will be, so this always re-checks the
+ * database on every request. Slightly slower than requireSession(), but stays
+ * completely independent of the session/membership shape, whatever it becomes.
+ */
+export async function requireSuperAdmin(): Promise<
+  { session: SessionPayload; error: null } | { session: null; error: Response }
+> {
+  const { session, error } = await requireSession();
+  if (error) return { session: null, error };
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.userId },
+    select: { isSuperAdmin: true },
+  });
+  if (!user?.isSuperAdmin) {
+    return { session: null, error: Response.json({ error: "Forbidden" }, { status: 403 }) };
+  }
+
+  return { session, error: null };
 }
 
 // --- Driver invite tokens ---

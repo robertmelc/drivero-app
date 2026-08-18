@@ -117,6 +117,10 @@ model User {
   role        UserRole
   startedAt   DateTime?  @map("started_at")
   status      UserStatus @default(invited)
+  // Platform-level, not company-scoped — sees across every company regardless
+  // of CompanyMembership. Deliberately not part of the JWT session payload;
+  // checked with a fresh DB read on every request (see requireSuperAdmin()).
+  isSuperAdmin Boolean   @default(false) @map("is_super_admin")
   createdAt   DateTime   @default(now()) @map("created_at")
   updatedAt   DateTime   @updatedAt @map("updated_at")
 
